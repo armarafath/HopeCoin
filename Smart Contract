@@ -1,0 +1,77 @@
+pragma solidity ^0.8.0;
+
+contract HopeCoin {
+
+    address public charityWallet;
+    uint public totalSupply;
+    mapping(address => uint256) public balances;
+
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event CharityDonation(uint256 amount);
+    event CommunityDistribution(uint256 amount);
+
+    constructor(address _charityWallet) {
+        charityWallet = _charityWallet;
+        totalSupply = 1000000000000000000000;
+        balances[msg.sender] = totalSupply;
+    }
+
+    function createCoin(uint amount) public returns (bool success) {
+        require(amount <= totalSupply);
+        totalSupply -= amount;
+        balances[msg.sender] += amount;
+        emit Transfer(address(0), msg.sender, amount);
+        return true;
+    }
+
+    function transfer(address to, uint256 amount) public returns (bool success) {
+        require(amount <= balances[msg.sender]);
+        balances[msg.sender] -= amount;
+        balances[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+
+        // 5% burn
+        uint256 burnAmount = amount * 5 / 100;
+        address(0).transfer(burnAmount);
+
+        // 1% community distribution
+        uint256 communityAmount = amount * 1 / 100;
+        balances[msg.sender] += communityAmount;
+
+        // 2% charity donation
+        uint256 charityAmount = amount * 2 / 100;
+        charityWallet.transfer(charityAmount);
+
+        return true;
+    }
+
+    function donateToCharity(uint256 amount) public {
+        require(amount <= balances[msg.sender]);
+        balances[msg.sender] -= amount;
+        charityWallet.transfer(amount);
+        emit CharityDonation(amount);
+    }
+
+    function burnCoin(uint amount) public returns (bool success) {
+        require(amount <= balances[msg.sender]);
+        balances[msg.sender] -= amount;
+        address(0).transfer(amount);
+        emit Burn(amount);
+        return true;
+    }
+
+    function getBalance(address account) public view returns (uint256 balance) {
+        return balances[account];
+    }
+
+    function getTotalSupply() public view returns (uint256 totalSupply) {
+        return totalSupply;
+    }
+
+    function renounceOwnership() public {
+        address previousOwner = owner;
+        owner = address(0);
+        emit OwnershipRenounced(previousOwner);
+    }
+
+}
